@@ -5,10 +5,14 @@ import flixel.util.FlxColor;
 import flixel.FlxSprite;
 
 class Player extends FlxSprite {
+    public var isHuggingWall:Bool;
+
     public function new(?X:Float = 0, ?Y:Float = 0) {
         super(X, Y);
         makeGraphic(50, 50, FlxColor.BLUE);
-        visible = false;
+        // visible = false;
+
+        isHuggingWall = false;
     }
 
     public function getLeftEar():FlxPoint {

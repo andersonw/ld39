@@ -5,11 +5,17 @@ import flixel.FlxState;
 import flixel.math.FlxPoint;
 import flixel.system.FlxSound;
 
-class PlayState extends FlxState
-{
+class PlayState extends FlxState {
+	private var _level:Level;
+	private var _levelFile:String;
+
 	public var player:Player;
-	public var sounds:Array<SoundObject>;
+	public var lastPlayerPos:FlxPoint;
+	// public var sounds:Array<SoundObject>;
 	public var soundsDone:Int;
+
+	public var walkSound:FlxSound;
+	public var wallBumpSound:FlxSound;
 
 	public var niceSound:FlxSound;
 	public var winSound:FlxSound;
@@ -19,17 +25,23 @@ class PlayState extends FlxState
 	override public function create():Void {
 		super.create();
 
-		player = new Player(320, 240);
+		_levelFile = Registry.levelList[Registry.currLevel];
+		_level = new Level(_levelFile, this);
+
+		for(entityGroup in _level.entityGroups)	{
+			add(entityGroup);
+		}
+
+		player = new Player(_level.spawn.x, _level.spawn.y);
+		lastPlayerPos = new FlxPoint(player.x, player.y);
 		add(player);
-		var sound1:SoundObject = new SoundObject(300, 400, this, 1);
-		var sound2:SoundObject = new SoundObject(600, 200, this, 0);
-		var sound3:SoundObject = new SoundObject(40, 20, this, 2);
-		sounds = new Array<SoundObject>();
-		sounds.push(sound2);
-		sounds.push(sound1);
-		sounds.push(sound3);
+		FlxG.camera.follow(player);
+		resetLevelBounds();
+
 		soundsDone = 0;
 
+		walkSound = FlxG.sound.load(AssetPaths.walking__wav);
+		wallBumpSound = FlxG.sound.load(AssetPaths.wall_bump__wav);
 		niceSound = FlxG.sound.load(AssetPaths.nice__wav);
 		winSound = FlxG.sound.load(AssetPaths.you_did_it__wav);
 		loseSound = FlxG.sound.load(AssetPaths.you_lose__wav);
@@ -40,13 +52,25 @@ class PlayState extends FlxState
 		super.update(elapsed);
 		if (!lost) {
 			handlePlayerMovement();
-			for (i in 0...sounds.length) {
-				var done:Bool = sounds[i].updateAndCheckVolume();
-				if (done) {
-					if (soundsDone==i) {
-						sounds[i].off = true;
+			FlxG.collide(player, _level.walls, processWallCollision);
+			if (!playerTouchingWall()) player.isHuggingWall = false;
+
+			var currPos:FlxPoint = new FlxPoint(player.x, player.y);
+			if (!lastPlayerPos.equals(currPos)) {
+				walkSound.play();
+				lastPlayerPos = currPos;
+			}
+			for (i in 0..._level.alarms.length) {
+				var alarm:Alarm = _level.alarms.members[i];
+				if (alarm.off) continue;
+
+				var playerAtAlarm:Bool = alarm.updateAndCheckVolume();
+				if (playerAtAlarm) {
+					if (soundsDone==alarm.pitch) {
+						alarm.off = true;
+						alarm.silence();
 						soundsDone += 1;
-						if (soundsDone==sounds.length) {
+						if (soundsDone==_level.alarms.length) {
 							winSound.play();
 						} else {
 							niceSound.play();
@@ -61,10 +85,30 @@ class PlayState extends FlxState
 		}
 	}
 
-	public function silenceEverything():Void {
-		for (sound in sounds) {
-			sound.silence();
+	public function processWallCollision(player:Player, wall:Wall) {
+		if (!player.isHuggingWall) {
+			wallBumpSound.play();
+			player.isHuggingWall = true;
 		}
+	}
+
+	public function playerTouchingWall():Bool {
+		for (wall in _level.walls) {
+			if (wall.overlapsSprite(player))
+				return true;
+		}
+		return false;
+	}
+
+	public function silenceEverything():Void {
+		for (alarm in _level.alarms) {
+			alarm.silence();
+		}
+	}
+
+	public function resetLevelBounds() {
+		_level.updateBounds();
+		FlxG.worldBounds.set(_level.bounds.x, _level.bounds.y, _level.bounds.width, _level.bounds.height);
 	}
 
 	public function handlePlayerMovement():Void {
