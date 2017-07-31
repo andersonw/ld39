@@ -19,7 +19,7 @@ class SoundObject extends FlxSprite {
         _playState = playState;
 
         makeGraphic(2, 2, FlxColor.RED);
-        // visible = false;
+        if (!Registry.debug) visible = false;
     }
 
     public function updateAndCheckVolume():Bool {

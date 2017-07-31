@@ -17,6 +17,7 @@ class Saw extends SoundObject {
     public function new(?X:Float=0, ?Y:Float=0, ?width:Int=32, ?height:Int=32, ?pitch:Int=0, ?shape:String, playState:PlayState) {
         super(X, Y, playState);
         makeGraphic(20, 20, new FlxColor(0xffa0a0a0));
+        if (!Registry.debug) visible = false;
         _leftSound = FlxG.sound.load(LEFT_SOUNDS[pitch], 1, true);
         _rightSound = FlxG.sound.load(RIGHT_SOUNDS[pitch], 1, true);
         _leftSound.play();

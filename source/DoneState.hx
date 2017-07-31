@@ -9,7 +9,7 @@ class DoneState extends FlxState {
     var totalTimeElapsed:Float;
 
     override public function create():Void {
-        doneNarration = FlxG.sound.load(AssetPaths.you_beat_the_game__wav);
+        doneNarration = FlxG.sound.load(AssetPaths.end_narration__wav);
         doneNarration.play();
         totalTimeElapsed = 0;
     }

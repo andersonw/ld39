@@ -11,6 +11,7 @@ class PlayState extends FlxState {
 
 	public var player:Player;
 	public var lastPlayerPos:FlxPoint;
+	public var lastNumWallsTouched:Int;
 	// public var sounds:Array<SoundObject>;
 	public var soundsDone:Int;
 
@@ -20,7 +21,10 @@ class PlayState extends FlxState {
 
 	public var niceSound:FlxSound;
 	public var winSound:FlxSound;
-	public var loseSound:FlxSound;
+	public var loseSound:FlxSound; // losing by picking up in the wrong order
+	public var buzzSound:FlxSound;
+	public var sawDeathSound:FlxSound;
+	public var sawWhirSound:FlxSound;
 	public var lost:Bool;
 	public var waitingToWin:Bool;
 	public var winTimer:Float;
@@ -40,6 +44,7 @@ class PlayState extends FlxState {
 
 		player = new Player(_level.spawn.x, _level.spawn.y);
 		lastPlayerPos = new FlxPoint(player.x, player.y);
+		lastNumWallsTouched = 0;
 		add(player);
 		FlxG.camera.follow(player);
 		resetLevelBounds();
@@ -50,7 +55,10 @@ class PlayState extends FlxState {
 		wallBumpSound = FlxG.sound.load(AssetPaths.wall_bump__wav);
 		niceSound = FlxG.sound.load(AssetPaths.nice__wav);
 		winSound = FlxG.sound.load(AssetPaths.great_job__wav);
-		loseSound = FlxG.sound.load(AssetPaths.you_lose__wav);
+		loseSound = FlxG.sound.load(AssetPaths.wrong_order__wav);
+		buzzSound = FlxG.sound.load(AssetPaths.buzz__wav);
+		sawDeathSound = FlxG.sound.load(AssetPaths.saw_death__wav);
+		sawWhirSound = FlxG.sound.load(AssetPaths.saw_whir__wav, .6);
 		lost = false;
 		waitingToWin = false;
 		winTimer = 0;
@@ -58,14 +66,22 @@ class PlayState extends FlxState {
 
 	override public function update(elapsed:Float):Void {
 		super.update(elapsed);
+		if (lost) {
+			player.velocity.set(0,0);
+		}
 		if (FlxG.keys.pressed.R && !waitingToWin) {
 			Registry.restartedLevel = true;
 			FlxG.switchState(new PlayState());
 		}
 		for (saw in _level.saws) {
 			saw.updatePosition(elapsed);
-			if (saw.updateAndCheckVolume()) {
-				trace("Intersecting a saw!");
+			if (saw.updateAndCheckVolume() && !lost) {
+				lost = true;
+				if (Registry.numSawDeaths < 2) {
+					sawDeathSound.play();
+				}
+				sawWhirSound.play();
+				Registry.numSawDeaths += 1;
 			}
 		}
 		if (waitingToWin) {
@@ -81,7 +97,12 @@ class PlayState extends FlxState {
 		} else if (!lost) {
 			handlePlayerMovement();
 			FlxG.collide(player, _level.walls, processWallCollision);
-			if (!playerTouchingWall()) player.isHuggingWall = false;
+			var currentTouchingWallCount:Int = playerTouchingWallCount();
+			if (currentTouchingWallCount > lastNumWallsTouched) {
+				wallBumpSound.play();
+			}
+			lastNumWallsTouched = currentTouchingWallCount;
+			// trace(lastNumWallsTouched);
 
 			var currPos:FlxPoint = new FlxPoint(player.x, player.y);
 			if (!lastPlayerPos.equals(currPos)) {
@@ -111,9 +132,10 @@ class PlayState extends FlxState {
 							niceSound.play();
 						}
 					} else {
+						alarm.silence();
 						lost = true;
-						silenceEverything();
 						loseSound.play();
+						buzzSound.play();
 					}
 				}
 			}
@@ -121,18 +143,16 @@ class PlayState extends FlxState {
 	}
 
 	public function processWallCollision(player:Player, wall:Wall) {
-		if (!player.isHuggingWall) {
-			wallBumpSound.play();
-			player.isHuggingWall = true;
-		}
+
 	}
 
-	public function playerTouchingWall():Bool {
+	public function playerTouchingWallCount():Int {
+		var count:Int = 0;
 		for (wall in _level.walls) {
 			if (wall.overlapsSprite(player))
-				return true;
+				count += 1;
 		}
-		return false;
+		return count;
 	}
 
 	public function silenceEverything():Void {
@@ -153,16 +173,13 @@ class PlayState extends FlxState {
         var _left:Bool = false;
         var _right:Bool = false;
 
-        _up = FlxG.keys.anyPressed([UP]);
-        _down = FlxG.keys.anyPressed([DOWN]);
-        _left = FlxG.keys.anyPressed([LEFT]);
-        _right = FlxG.keys.anyPressed([RIGHT]);
+        _up = FlxG.keys.anyPressed([UP, W]);
+        _down = FlxG.keys.anyPressed([DOWN, S]);
+        _left = FlxG.keys.anyPressed([LEFT, A]);
+        _right = FlxG.keys.anyPressed([RIGHT, D]);
 
 		var speed:Float;
-        if (FlxG.keys.anyPressed([SHIFT]))
-            speed = 50;
-        else
-            speed = 200;
+        speed = 200;
 
         if (_up && _down)
             _up = _down = false;
