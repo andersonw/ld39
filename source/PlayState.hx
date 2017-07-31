@@ -14,6 +14,7 @@ class PlayState extends FlxState {
 	// public var sounds:Array<SoundObject>;
 	public var soundsDone:Int;
 
+	public var narrationSound:FlxSound;
 	public var walkSound:FlxSound;
 	public var wallBumpSound:FlxSound;
 
@@ -21,10 +22,15 @@ class PlayState extends FlxState {
 	public var winSound:FlxSound;
 	public var loseSound:FlxSound;
 	public var lost:Bool;
+	public var waitingToWin:Bool;
+	public var winTimer:Float;
 
 	override public function create():Void {
 		super.create();
-
+		narrationSound = FlxG.sound.load(Registry.narrationList[Registry.currLevel]);
+		if (!Registry.restartedLevel) {
+			narrationSound.play();
+		}
 		_levelFile = Registry.levelList[Registry.currLevel];
 		_level = new Level(_levelFile, this);
 
@@ -43,14 +49,36 @@ class PlayState extends FlxState {
 		walkSound = FlxG.sound.load(AssetPaths.walking__wav);
 		wallBumpSound = FlxG.sound.load(AssetPaths.wall_bump__wav);
 		niceSound = FlxG.sound.load(AssetPaths.nice__wav);
-		winSound = FlxG.sound.load(AssetPaths.you_did_it__wav);
+		winSound = FlxG.sound.load(AssetPaths.great_job__wav);
 		loseSound = FlxG.sound.load(AssetPaths.you_lose__wav);
 		lost = false;
+		waitingToWin = false;
+		winTimer = 0;
 	}
 
 	override public function update(elapsed:Float):Void {
 		super.update(elapsed);
-		if (!lost) {
+		if (FlxG.keys.pressed.R && !waitingToWin) {
+			Registry.restartedLevel = true;
+			FlxG.switchState(new PlayState());
+		}
+		for (saw in _level.saws) {
+			saw.updatePosition(elapsed);
+			if (saw.updateAndCheckVolume()) {
+				trace("Intersecting a saw!");
+			}
+		}
+		if (waitingToWin) {
+			winTimer += elapsed;
+			if (winTimer*1000 > winSound.length + 500) {
+				Registry.currLevel += 1;
+				if (Registry.currLevel != Registry.levelList.length) {
+					FlxG.switchState(new PlayState());
+				} else {
+					FlxG.switchState(new DoneState());
+				}
+			}
+		} else if (!lost) {
 			handlePlayerMovement();
 			FlxG.collide(player, _level.walls, processWallCollision);
 			if (!playerTouchingWall()) player.isHuggingWall = false;
@@ -59,6 +87,8 @@ class PlayState extends FlxState {
 			if (!lastPlayerPos.equals(currPos)) {
 				walkSound.play();
 				lastPlayerPos = currPos;
+			} else {
+				walkSound.stop();
 			}
 			for (i in 0..._level.alarms.length) {
 				var alarm:Alarm = _level.alarms.members[i];
@@ -71,7 +101,12 @@ class PlayState extends FlxState {
 						alarm.silence();
 						soundsDone += 1;
 						if (soundsDone==_level.alarms.length) {
-							winSound.play();
+							narrationSound.stop();
+							if (Registry.currLevel < Registry.levelList.length - 1) {
+								winSound.play();
+							}
+							Registry.restartedLevel = false;
+							waitingToWin = true;
 						} else {
 							niceSound.play();
 						}

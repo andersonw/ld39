@@ -9,8 +9,7 @@ import flixel.math.FlxRect;
 import flixel.util.FlxColor;
 
 // adapted from https://github.com/HaxeFlixel/flixel-demos/blob/master/Editors/TiledEditor/source/TiledLevel.hx
-class Level extends TiledMap
-{
+class Level extends TiledMap {
     private var _playState:PlayState;
 
     public var walls:FlxTypedGroup<Wall>;
@@ -23,8 +22,7 @@ class Level extends TiledMap
 
     public var spawn:FlxPoint;
 
-    public function new(levelPath:String, playState:PlayState)
-    {
+    public function new(levelPath:String, playState:PlayState) {
         super(levelPath);
         _playState = playState;
 
@@ -34,16 +32,12 @@ class Level extends TiledMap
 
         entityGroups = [walls, alarms, saws];
 
-        for (layer in layers)
-        {
+        for (layer in layers) {
             if (layer.type != TiledLayerType.OBJECT) continue;
 
             var objectLayer:TiledObjectLayer = cast layer;
-            for (obj in objectLayer.objects)
-            {
-                // waste of an object, but if we don't put this compiler complains about levelObj.scaleFactor
-                switch(objectLayer.name)
-                {
+            for (obj in objectLayer.objects) {
+                switch(objectLayer.name) {
                     case "Walls":
                         var levelObj:Wall = new Wall(obj.x, obj.y, obj.width, obj.height);
                         walls.add(levelObj);
@@ -52,7 +46,9 @@ class Level extends TiledMap
                         var levelObj:Alarm = new Alarm(obj.x, obj.y, _playState, pitch);
                         alarms.add(levelObj);
                     case "Saws":
-                        var levelObj:Saw = new Saw(obj.x, obj.y, obj.width, obj.height, _playState);
+                        var pitch:Int = Std.parseInt(obj.properties.get("pitch"));
+                        var shape:String = obj.properties.get("shape");
+                        var levelObj:Saw = new Saw(obj.x, obj.y, obj.width, obj.height, pitch, shape, _playState);
                         saws.add(levelObj);
                     case "Locations":
                         if(obj.name == "start")
@@ -65,18 +61,15 @@ class Level extends TiledMap
         updateBounds();
     }
 
-    public function updateBounds()
-    {
+    public function updateBounds() {
         // update bounds
         var minX:Float=0.;
         var maxX:Float=0.;
         var minY:Float=0.;
         var maxY:Float=0.;
         
-        for(entityGroup in entityGroups)
-        {
-            for(obj in entityGroup)
-            {
+        for(entityGroup in entityGroups) {
+            for(obj in entityGroup) {
                 minX = Math.min(minX, obj.x);
                 maxX = Math.max(maxX, obj.x+obj.width);
                 minY = Math.min(minY, obj.y);

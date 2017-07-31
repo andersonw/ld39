@@ -32,8 +32,10 @@ class SoundObject extends FlxSprite {
             var player:Player = _playState.player;
             var leftEarDistance:Float = player.getLeftEar().distanceTo(new FlxPoint(this.x, this.y));
             var rightEarDistance:Float = player.getRightEar().distanceTo(new FlxPoint(this.x, this.y));
-            var leftVolume:Float = Math.min(1, 1200/Math.pow(leftEarDistance,1.5));
-            var rightVolume:Float = Math.min(1, 1200/Math.pow(rightEarDistance,1.5));
+            var leftVolume:Float = Math.min(1, 4000/Math.pow(leftEarDistance,1.8));
+            var rightVolume:Float = Math.min(1, 4000/Math.pow(rightEarDistance,1.8));
+            leftVolume = Math.max(leftVolume, 0.01);
+            rightVolume = Math.max(rightVolume, 0.01);
             // trace(leftEarDistance + " " + rightEarDistance);
             // trace(leftVolume + " " + rightVolume);
             _leftSound.volume = leftVolume;

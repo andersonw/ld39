@@ -16,13 +16,13 @@ class Player extends FlxSprite {
     }
 
     public function getLeftEar():FlxPoint {
-        var x:Float = this.x - 50;
+        var x:Float = this.x - 30;
         var y:Float = this.y + this.height/2;
         return new FlxPoint(x, y);
     }
 
     public function getRightEar():FlxPoint {
-        var x:Float = this.x + this.width + 50;
+        var x:Float = this.x + this.width + 30;
         var y:Float = this.y + this.height/2;
         return new FlxPoint(x, y);
     }
